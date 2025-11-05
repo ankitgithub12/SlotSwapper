@@ -4,14 +4,20 @@ const cors = require('cors');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
+const path = require('path');
 
 const app = express();
 const server = createServer(app);
 
-// Enhanced CORS configuration
+// Enhanced CORS configuration for production
 const allowedOrigins = process.env.CLIENT_URLS ? 
   process.env.CLIENT_URLS.split(',') : 
   ['http://localhost:3000', 'http://localhost:3001'];
+
+// Add production frontend URL automatically
+if (process.env.NODE_ENV === 'production') {
+  allowedOrigins.push('https://slotswapper-frontend.onrender.com');
+}
 
 console.log('Allowed CORS origins:', allowedOrigins);
 
@@ -28,7 +34,6 @@ const io = new Server(server, {
 // Enhanced CORS middleware
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.indexOf(origin) !== -1) {
@@ -50,11 +55,9 @@ app.use(express.json());
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   
-  // Join user to their own room for personalized notifications
   socket.on('join-user', (userId) => {
-    // Add validation to prevent crashes
     if (userId === null || userId === undefined) {
-      console.error('❌ Invalid userId (null/undefined) received for join-user from socket:', socket.id);
+      console.error('❌ Invalid userId received for join-user from socket:', socket.id);
       return;
     }
     
@@ -67,12 +70,10 @@ io.on('connection', (socket) => {
     }
   });
   
-  // Handle disconnect
   socket.on('disconnect', (reason) => {
     console.log('User disconnected:', socket.id, 'Reason:', reason);
   });
 
-  // Handle connection errors
   socket.on('connect_error', (error) => {
     console.error('Socket connection error:', error);
   });
@@ -86,16 +87,23 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/swap', require('./routes/swap'));
 
-// MongoDB connection
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => console.log('MongoDB connection error:', err));
+// MongoDB connection with better error handling
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/slotswapper', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('MongoDB connected successfully'))
+.catch(err => {
+  console.log('MongoDB connection error:', err);
+  process.exit(1);
+});
 
 // Basic route
 app.get('/', (req, res) => {
   res.json({ 
     message: 'SlotSwapper API is running!',
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
     cors: {
       allowedOrigins: allowedOrigins,
       status: 'Active'
@@ -110,14 +118,24 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
-    mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
+    mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+    environment: process.env.NODE_ENV || 'development'
   });
 });
+
+// Serve static files in production - MUST BE AFTER API ROUTES, BEFORE app.listen
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+  
+  // Serve React app for all other routes (must be last route)
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  });
+}
 
 // Error handling for unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled Promise Rejection:', err);
-  // Close server & exit process
   server.close(() => {
     process.exit(1);
   });
@@ -136,7 +154,7 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Socket.io server initialized`);
-  console.log(`🌐 CORS enabled for: ${allowedOrigins.join(', ')}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
 });
 
