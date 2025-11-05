@@ -16,7 +16,7 @@ const allowedOrigins = process.env.CLIENT_URLS ?
 
 // Add production frontend URL automatically
 if (process.env.NODE_ENV === 'production') {
-  allowedOrigins.push('https://slotswapper-frontend.onrender.com');
+  allowedOrigins.push('https://slotswapper-frontend-rtry.onrender.com');
 }
 
 console.log('Allowed CORS origins:', allowedOrigins);

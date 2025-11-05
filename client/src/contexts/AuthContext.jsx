@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
 
   // Set base URL for API calls
   useEffect(() => {
-    axios.defaults.baseURL = 'http://localhost:5000';
+    axios.defaults.baseURL = 'https://slotswapper-backend-kapb.onrender.com';
   }, []);
 
   // Debug user object when it changes

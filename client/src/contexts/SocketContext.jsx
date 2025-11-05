@@ -20,7 +20,7 @@ export function SocketProvider({ children }) {
     if (user && userId) {
       console.log('Initializing socket connection for user:', userId);
       
-      const newSocket = io('http://localhost:5000', {
+      const newSocket = io('https://slotswapper-backend-kapb.onrender.com', {
         withCredentials: true,
         transports: ['websocket', 'polling'],
         timeout: 10000,
