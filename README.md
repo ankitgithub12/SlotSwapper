@@ -52,7 +52,7 @@ slotswapper/
 │   ├── src/
 │   │   ├── components/     # Reusable components
 │   │   ├── contexts/       # Auth & Socket contexts
-│   │   ├── pages/          # Main pages
+│   │   ├── hooks/          # Main pages
 │   │   └── App.jsx         # Main app component
 │   └── package.json
 ├── server/                 # Node.js backend
